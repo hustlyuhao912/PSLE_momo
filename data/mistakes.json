@@ -21,8 +21,8 @@
     "background_context": "The diagram shows a pond with multiple types of floating plants on the surface, one type of submerged plant, one type of fish, and one frog.",
     "correct_answer": "(1) B only",
     "working": "A is false — there are multiple types of floating plants, so they do not make up one population. B is true — fish and frogs are two populations of animals. C is false — there is only one community in a habitat (all populations living together), not separate communities for plants and animals.",
-    "has_image": false,
-    "image_path": "",
+    "has_image": true,
+    "image_path": "images/0845eaa6.jpg",
     "date_added": "2026-04-28"
   },
   {
