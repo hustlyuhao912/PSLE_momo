@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PSLE Mistake Tracker</title>
+  <style>
+    :root {
+      --math-bg: #dbeafe; --math-fg: #1e3a8a;
+      --sci-bg:  #dcfce7; --sci-fg:  #14532d;
+      --eng-bg:  #f3e8ff; --eng-fg:  #581c87;
+      --chi-bg:  #ffedd5; --chi-fg:  #7c2d12;
+      --radius: 12px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
+                   'Microsoft YaHei', 'Noto Sans CJK SC', sans-serif;
+      background: #f1f5f9;
+      color: #1e293b;
+      min-height: 100vh;
+    }
+
+    /* ── Header ─────────────────────────────────────────────────── */
+    header {
+      background: #1e40af;
+      color: #fff;
+      padding: 14px 20px 12px;
+      position: sticky;
+      top: 0;
+      z-index: 200;
+      box-shadow: 0 2px 8px rgba(0,0,0,.25);
+    }
+    header h1 { font-size: 1.15rem; font-weight: 700; letter-spacing: -.01em; }
+    header p  { font-size: .78rem; opacity: .75; margin-top: 2px; }
+
+    /* ── Filters ─────────────────────────────────────────────────── */
+    .filters {
+      background: #fff;
+      border-bottom: 1px solid #e2e8f0;
+      padding: 10px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .filter-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .filter-label { font-size: .72rem; font-weight: 600; color: #64748b;
+                    text-transform: uppercase; letter-spacing: .04em; white-space: nowrap; }
+
+    .subject-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+    .tab {
+      padding: 5px 13px;
+      border-radius: 20px;
+      border: 1.5px solid #cbd5e1;
+      background: #fff;
+      font-size: .82rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background .12s, border-color .12s, color .12s;
+    }
+    .tab:hover { background: #f8fafc; }
+    .tab.active { background: #1e40af; color: #fff; border-color: #1e40af; }
+
+    .topic-select {
+      padding: 5px 10px;
+      border-radius: 8px;
+      border: 1.5px solid #cbd5e1;
+      font-size: .82rem;
+      background: #fff;
+      cursor: pointer;
+      color: #1e293b;
+    }
+
+    .search-input {
+      flex: 1;
+      min-width: 140px;
+      padding: 5px 10px;
+      border-radius: 8px;
+      border: 1.5px solid #cbd5e1;
+      font-size: .82rem;
+      color: #1e293b;
+      outline: none;
+    }
+    .search-input:focus { border-color: #1e40af; }
+
+    .count-tag {
+      margin-left: auto;
+      font-size: .74rem;
+      color: #94a3b8;
+      white-space: nowrap;
+    }
+
+    /* ── Cards grid ──────────────────────────────────────────────── */
+    .cards {
+      padding: 16px;
+      display: grid;
+      gap: 14px;
+      max-width: 960px;
+      margin: 0 auto;
+    }
+    @media (min-width: 700px) {
+      .cards { grid-template-columns: 1fr 1fr; }
+    }
+
+    /* ── Individual card ─────────────────────────────────────────── */
+    .card {
+      background: #fff;
+      border-radius: var(--radius);
+      box-shadow: 0 1px 4px rgba(0,0,0,.08);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .card-head {
+      padding: 11px 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 1px solid #f1f5f9;
+      flex-wrap: wrap;
+    }
+    .badge {
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: .68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      white-space: nowrap;
+    }
+    .badge-Mathematics { background: var(--math-bg); color: var(--math-fg); }
+    .badge-Science     { background: var(--sci-bg);  color: var(--sci-fg);  }
+    .badge-English     { background: var(--eng-bg);  color: var(--eng-fg);  }
+    .badge-Chinese     { background: var(--chi-bg);  color: var(--chi-fg);  }
+
+    .card-topic  { font-size: .88rem; font-weight: 700; }
+    .card-qtype  { font-size: .72rem; color: #94a3b8; margin-left: auto; }
+
+    .card-body { padding: 14px; flex: 1; display: flex; flex-direction: column; gap: 10px; }
+
+    .section-lbl {
+      font-size: .68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      color: #94a3b8;
+      margin-bottom: 4px;
+    }
+
+    .context-box {
+      background: #f8fafc;
+      border-left: 3px solid #cbd5e1;
+      padding: 9px 12px;
+      border-radius: 0 6px 6px 0;
+      font-size: .85rem;
+      line-height: 1.65;
+      color: #475569;
+      white-space: pre-wrap;
+    }
+
+    .question-text {
+      font-size: .92rem;
+      line-height: 1.7;
+      white-space: pre-wrap;
+    }
+
+    .answer-box {
+      background: #f0fdf4;
+      border: 1.5px solid #86efac;
+      border-radius: 8px;
+      padding: 10px 12px;
+    }
+    .answer-box .section-lbl { color: #15803d; }
+    .answer-text {
+      font-size: .92rem;
+      font-weight: 600;
+      color: #166534;
+      line-height: 1.6;
+      white-space: pre-wrap;
+    }
+
+    .working-box {
+      background: #fafafa;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 10px 12px;
+    }
+    .working-text {
+      font-size: .82rem;
+      line-height: 1.85;
+      white-space: pre-wrap;
+      font-family: 'Courier New', 'Menlo', monospace;
+      color: #334155;
+    }
+
+    .card-foot {
+      padding: 9px 14px;
+      border-top: 1px solid #f1f5f9;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .date-tag { font-size: .72rem; color: #94a3b8; margin-left: auto; }
+    .btn-photo {
+      padding: 4px 12px;
+      border-radius: 6px;
+      border: 1.5px solid #cbd5e1;
+      background: #fff;
+      font-size: .78rem;
+      cursor: pointer;
+      color: #475569;
+      transition: background .1s;
+    }
+    .btn-photo:hover { background: #f1f5f9; }
+
+    .photo-wrap { display: none; padding: 0 14px 14px; }
+    .photo-wrap img { width: 100%; border-radius: 8px; border: 1px solid #e2e8f0; }
+
+    /* ── Empty / error states ────────────────────────────────────── */
+    .state-msg {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 60px 20px;
+      color: #94a3b8;
+      font-size: .95rem;
+    }
+
+    /* ── Print FAB ───────────────────────────────────────────────── */
+    .fab {
+      position: fixed;
+      bottom: 22px;
+      right: 22px;
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      background: #1e40af;
+      color: #fff;
+      border: none;
+      font-size: 1.25rem;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(30,64,175,.45);
+      z-index: 300;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .fab:hover { background: #1d3fa5; }
+
+    /* ── Refresh button ──────────────────────────────────────────── */
+    .btn-refresh {
+      padding: 5px 12px;
+      border-radius: 8px;
+      border: 1.5px solid #cbd5e1;
+      background: #fff;
+      font-size: .78rem;
+      cursor: pointer;
+      color: #475569;
+    }
+    .btn-refresh:hover { background: #f1f5f9; }
+
+    /* ── Print styles ────────────────────────────────────────────── */
+    @media print {
+      header { position: static !important; background: #1e40af !important;
+               -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .filters, .fab, .btn-photo, .btn-refresh { display: none !important; }
+      .card { break-inside: avoid; box-shadow: none;
+               border: 1px solid #e2e8f0; margin-bottom: 12px; }
+      .photo-wrap { display: block !important; }
+      body { background: #fff; }
+      .cards { display: block; padding: 12px; }
+      .badge { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .answer-box { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>PSLE Mistake Tracker</h1>
+  <p id="hdr-sub">Loading…</p>
+</header>
+
+<div class="filters">
+  <div class="filter-row">
+    <span class="filter-label">Subject</span>
+    <div class="subject-tabs" id="subject-tabs"></div>
+  </div>
+  <div class="filter-row">
+    <span class="filter-label">Topic</span>
+    <select class="topic-select" id="topic-sel" onchange="onTopicChange(this.value)">
+      <option value="All">All Topics</option>
+    </select>
+    <input class="search-input" id="search-box" type="search"
+           placeholder="Search question text…" oninput="onSearch()" />
+    <span class="count-tag" id="count-tag"></span>
+    <button class="btn-refresh" onclick="loadData()">↻ Refresh</button>
+  </div>
+</div>
+
+<div class="cards" id="cards"></div>
+
+<button class="fab" onclick="window.print()" title="Print / Save PDF">🖨</button>
+
+<script>
+const SUBJECT_ORDER = ['Mathematics', 'Science', 'English', 'Chinese'];
+
+let all = [];
+let activeSubject = 'All';
+let activeTopic   = 'All';
+let searchQuery   = '';
+
+// ── Data loading ────────────────────────────────────────────────────────────
+async function loadData() {
+  document.getElementById('hdr-sub').textContent = 'Loading…';
+  try {
+    const r = await fetch('data/mistakes.json?t=' + Date.now());
+    if (!r.ok) throw new Error(r.statusText);
+    all = await r.json();
+    buildUI();
+  } catch (e) {
+    document.getElementById('hdr-sub').textContent = 'Could not load data.';
+    document.getElementById('cards').innerHTML =
+      '<p class="state-msg">Failed to load mistakes.json — please try refreshing.</p>';
+  }
+}
+
+// ── Build full UI ────────────────────────────────────────────────────────────
+function buildUI() {
+  buildSubjectTabs();
+  syncTopicDropdown();
+  render();
+  const n = all.length;
+  document.getElementById('hdr-sub').textContent =
+    n + ' mistake' + (n !== 1 ? 's' : '') + ' recorded';
+}
+
+// ── Subject tabs ─────────────────────────────────────────────────────────────
+function buildSubjectTabs() {
+  const present = SUBJECT_ORDER.filter(s => all.some(m => m.subject === s));
+  const subjects = ['All', ...present];
+  document.getElementById('subject-tabs').innerHTML = subjects.map(s =>
+    `<button class="tab${s === activeSubject ? ' active' : ''}"
+             onclick="onSubject('${s}')">${s}</button>`
+  ).join('');
+}
+
+function onSubject(s) {
+  activeSubject = s;
+  activeTopic   = 'All';
+  document.querySelectorAll('.tab').forEach(t =>
+    t.classList.toggle('active', t.textContent === s));
+  syncTopicDropdown();
+  render();
+}
+
+// ── Topic dropdown ───────────────────────────────────────────────────────────
+function syncTopicDropdown() {
+  const pool = activeSubject === 'All' ? all : all.filter(m => m.subject === activeSubject);
+  const topics = [...new Set(pool.map(m => m.topic))].sort((a, b) => a.localeCompare(b));
+  const sel = document.getElementById('topic-sel');
+  sel.innerHTML = ['All', ...topics].map(t =>
+    `<option value="${esc(t)}"${t === activeTopic ? ' selected' : ''}>${t === 'All' ? 'All Topics' : esc(t)}</option>`
+  ).join('');
+  if (!topics.includes(activeTopic)) activeTopic = 'All';
+}
+
+function onTopicChange(v) { activeTopic = v; render(); }
+
+// ── Search ────────────────────────────────────────────────────────────────────
+function onSearch() {
+  searchQuery = document.getElementById('search-box').value.toLowerCase();
+  render();
+}
+
+// ── Render cards ─────────────────────────────────────────────────────────────
+function render() {
+  let list = all;
+  if (activeSubject !== 'All') list = list.filter(m => m.subject === activeSubject);
+  if (activeTopic   !== 'All') list = list.filter(m => m.topic   === activeTopic);
+  if (searchQuery)              list = list.filter(m =>
+    (m.question_text      || '').toLowerCase().includes(searchQuery) ||
+    (m.correct_answer     || '').toLowerCase().includes(searchQuery) ||
+    (m.background_context || '').toLowerCase().includes(searchQuery) ||
+    (m.topic              || '').toLowerCase().includes(searchQuery)
+  );
+
+  document.getElementById('count-tag').textContent =
+    list.length + ' item' + (list.length !== 1 ? 's' : '');
+
+  const container = document.getElementById('cards');
+  if (!list.length) {
+    container.innerHTML = '<p class="state-msg">No entries match this filter.</p>';
+    return;
+  }
+  container.innerHTML = list.map(cardHTML).join('');
+}
+
+// ── Card HTML ─────────────────────────────────────────────────────────────────
+function cardHTML(m) {
+  const ctx = m.background_context ? `
+    <div>
+      <div class="section-lbl">Context</div>
+      <div class="context-box">${esc(m.background_context)}</div>
+    </div>` : '';
+
+  const working = m.working ? `
+    <div class="working-box">
+      <div class="section-lbl">Working / Explanation</div>
+      <div class="working-text">${esc(m.working)}</div>
+    </div>` : '';
+
+  const photoBtn = m.has_image
+    ? `<button class="btn-photo" onclick="togglePhoto('${m.id}')">Show photo</button>`
+    : '';
+  const photoDiv = m.has_image
+    ? `<div class="photo-wrap" id="photo-${m.id}">
+         <img src="${esc(m.image_path)}" alt="Question photo" loading="lazy" />
+       </div>`
+    : '';
+
+  return `
+<div class="card">
+  <div class="card-head">
+    <span class="badge badge-${m.subject}">${esc(m.subject)}</span>
+    <span class="card-topic">${esc(m.topic)}</span>
+    <span class="card-qtype">${esc(m.question_type)}</span>
+  </div>
+  <div class="card-body">
+    ${ctx}
+    <div>
+      <div class="section-lbl">Question</div>
+      <div class="question-text">${esc(m.question_text)}</div>
+    </div>
+    <div class="answer-box">
+      <div class="section-lbl">Correct Answer</div>
+      <div class="answer-text">${esc(m.correct_answer)}</div>
+    </div>
+    ${working}
+  </div>
+  <div class="card-foot">
+    ${photoBtn}
+    <span class="date-tag">${esc(m.date_added)}</span>
+  </div>
+  ${photoDiv}
+</div>`;
+}
+
+// ── Toggle photo ──────────────────────────────────────────────────────────────
+function togglePhoto(id) {
+  const wrap = document.getElementById('photo-' + id);
+  const btn  = wrap.previousElementSibling.querySelector('.btn-photo');
+  const show = wrap.style.display !== 'block';
+  wrap.style.display = show ? 'block' : 'none';
+  if (btn) btn.textContent = show ? 'Hide photo' : 'Show photo';
+}
+
+// ── Escape HTML ───────────────────────────────────────────────────────────────
+function esc(s) {
+  if (!s) return '';
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;')
+          .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+loadData();
+</script>
+</body>
+</html>

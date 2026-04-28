@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: psle-momo-mcp
+    env: python
+    rootDir: mcp_server
+    buildCommand: pip install -r requirements.txt
+    startCommand: python main.py
+    envVars:
+      - key: GITHUB_TOKEN
+        sync: false
+      - key: PORT
+        value: 10000
