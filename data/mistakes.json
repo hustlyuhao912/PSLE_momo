@@ -24,5 +24,18 @@
     "has_image": false,
     "image_path": "",
     "date_added": "2026-04-28"
+  },
+  {
+    "id": "d4f7321d",
+    "subject": "Science",
+    "topic": "Electromagnetism",
+    "question_type": "MCQ",
+    "question_text": "Which of the following changes would make the alarm ring louder? A. Use a stiffer spring. B. Increase the number of coils of wire. C. Use a thicker iron bar to attach the hammer. (1) B only (2) C only (3) A and B only (4) B and C only",
+    "background_context": "Electromagnetic alarm diagram with battery, coil, iron core, iron bar, hammer, bell, and spring.",
+    "correct_answer": "(4) B and C only",
+    "working": "A wrong — stiffer spring resists electromagnet pull. B correct — more coils = stronger electromagnet. C correct — thicker iron bar = more magnetic material attracted.",
+    "has_image": false,
+    "image_path": "",
+    "date_added": "2026-04-28"
   }
 ]
