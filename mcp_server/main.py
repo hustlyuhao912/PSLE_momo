@@ -21,6 +21,9 @@ app.add_middleware(
 # session_id -> asyncio.Queue for SSE responses
 sessions: dict[str, asyncio.Queue] = {}
 
+# Serialises all writes to mistakes.json (safe because WEB_CONCURRENCY=1)
+_write_lock = asyncio.Lock()
+
 GITHUB_TOKEN = os.environ["GITHUB_TOKEN"]
 GITHUB_REPO = "hustlyuhao912/PSLE_momo"
 BRANCH = "main"
@@ -222,27 +225,20 @@ async def _save_mistake(args: dict) -> str:
             entry["has_image"] = False
             entry["image_path"] = ""
 
-    for attempt in range(4):
+    async with _write_lock:
         content, sha = await _get_file("data/mistakes.json")
         mistakes: list = json.loads(content) if content else []
         mistakes.append(entry)
-        try:
-            await _put_file(
-                "data/mistakes.json",
-                json.dumps(mistakes, ensure_ascii=False, indent=2),
-                sha=sha,
-                message=f"Add {args['subject']} — {args['topic']} ({entry_id})",
-            )
-            return (
-                f"Saved ✓  ID: {entry_id} | "
-                f"{args['subject']} › {args['topic']} › {args['question_type']}"
-            )
-        except httpx.HTTPStatusError as e:
-            if e.response.status_code == 409 and attempt < 3:
-                await asyncio.sleep(0.5 * (attempt + 1))
-                continue
-            raise
-    raise RuntimeError("Failed to save after retries")
+        await _put_file(
+            "data/mistakes.json",
+            json.dumps(mistakes, ensure_ascii=False, indent=2),
+            sha=sha,
+            message=f"Add {args['subject']} — {args['topic']} ({entry_id})",
+        )
+    return (
+        f"Saved ✓  ID: {entry_id} | "
+        f"{args['subject']} › {args['topic']} › {args['question_type']}"
+    )
 
 
 async def _update_mistake(args: dict) -> str:
@@ -250,7 +246,7 @@ async def _update_mistake(args: dict) -> str:
         "subject", "topic", "question_type", "question_text",
         "background_context", "correct_answer", "working",
     ]
-    for attempt in range(4):
+    async with _write_lock:
         content, sha = await _get_file("data/mistakes.json")
         if not content:
             return "No mistakes stored yet."
@@ -261,24 +257,17 @@ async def _update_mistake(args: dict) -> str:
         for field in updatable:
             if args.get(field):
                 entry[field] = args[field]
-        try:
-            await _put_file(
-                "data/mistakes.json",
-                json.dumps(mistakes, ensure_ascii=False, indent=2),
-                sha=sha,
-                message=f"Update {args['entry_id']}",
-            )
-            return f"Updated ✓  {args['entry_id']}"
-        except httpx.HTTPStatusError as e:
-            if e.response.status_code == 409 and attempt < 3:
-                await asyncio.sleep(0.5 * (attempt + 1))
-                continue
-            raise
-    raise RuntimeError("Failed to update after retries")
+        await _put_file(
+            "data/mistakes.json",
+            json.dumps(mistakes, ensure_ascii=False, indent=2),
+            sha=sha,
+            message=f"Update {args['entry_id']}",
+        )
+    return f"Updated ✓  {args['entry_id']}"
 
 
 async def _delete_mistake(args: dict) -> str:
-    for attempt in range(4):
+    async with _write_lock:
         content, sha = await _get_file("data/mistakes.json")
         if not content:
             return "No mistakes stored yet."
@@ -287,20 +276,13 @@ async def _delete_mistake(args: dict) -> str:
         new_mistakes = [m for m in mistakes if m["id"] != args["entry_id"]]
         if len(new_mistakes) == before:
             return f"Entry {args['entry_id']} not found."
-        try:
-            await _put_file(
-                "data/mistakes.json",
-                json.dumps(new_mistakes, ensure_ascii=False, indent=2),
-                sha=sha,
-                message=f"Delete {args['entry_id']}",
-            )
-            return f"Deleted ✓  {args['entry_id']}"
-        except httpx.HTTPStatusError as e:
-            if e.response.status_code == 409 and attempt < 3:
-                await asyncio.sleep(0.5 * (attempt + 1))
-                continue
-            raise
-    raise RuntimeError("Failed to delete after retries")
+        await _put_file(
+            "data/mistakes.json",
+            json.dumps(new_mistakes, ensure_ascii=False, indent=2),
+            sha=sha,
+            message=f"Delete {args['entry_id']}",
+        )
+    return f"Deleted ✓  {args['entry_id']}"
 
 
 async def _list_topics() -> str:
