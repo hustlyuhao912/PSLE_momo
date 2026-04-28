@@ -1,1 +1,15 @@
-[]
+[
+  {
+    "id": "1095d0cb",
+    "subject": "Science",
+    "topic": "Interactions within the Environment",
+    "question_type": "MCQ",
+    "question_text": "Which of the following options correctly shows the flow of plants, animals, and decomposers in a habitat? (1) plants → animals → decomposers (2) decomposers → animals ← plants (3) plants → animals, plants → decomposers, animals → decomposers (4) plants → animals, decomposers (unlinked)",
+    "background_context": "",
+    "correct_answer": "(3) plants → animals, with arrows from both plants and animals pointing to decomposers. Decomposers break down dead remains of both plants and animals.",
+    "working": "Decomposers break down the dead remains of ALL living things (both plants and animals). So arrows should go from plants to decomposers AND from animals to decomposers. Option (1) only shows a one-way chain (plants → animals → decomposers), which wrongly implies decomposers only break down animals.",
+    "has_image": false,
+    "image_path": "",
+    "date_added": "2026-04-28"
+  }
+]
