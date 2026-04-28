@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime
 
 import httpx
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, File, Form, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 
@@ -169,6 +169,10 @@ TOOLS = [
                 "background_context": {"type": "string"},
                 "correct_answer": {"type": "string"},
                 "working": {"type": "string"},
+                "image_base64": {
+                    "type": "string",
+                    "description": "Base64-encoded image to attach or replace the photo for this entry.",
+                },
             },
             "required": ["entry_id"],
         },
@@ -257,6 +261,21 @@ async def _update_mistake(args: dict) -> str:
         "subject", "topic", "question_type", "question_text",
         "background_context", "correct_answer", "working",
     ]
+    image_b64 = args.get("image_base64", "")
+
+    if image_b64:
+        raw = image_b64.split(",", 1)[-1]
+        try:
+            _, img_sha = await _get_file(f"images/{args['entry_id']}.jpg")
+            await _put_file(
+                f"images/{args['entry_id']}.jpg",
+                base64.b64decode(raw),
+                sha=img_sha,
+                message=f"Add image for {args['entry_id']}",
+            )
+        except Exception:
+            image_b64 = ""  # Don't update has_image if upload failed
+
     async with _write_lock:
         for attempt in range(4):
             content, sha = await _get_file("data/mistakes.json")
@@ -269,6 +288,9 @@ async def _update_mistake(args: dict) -> str:
             for field in updatable:
                 if args.get(field):
                     entry[field] = args[field]
+            if image_b64:
+                entry["has_image"] = True
+                entry["image_path"] = f"images/{args['entry_id']}.jpg"
             try:
                 await _put_file(
                     "data/mistakes.json",
@@ -343,6 +365,59 @@ async def _handle_tool(name: str, args: dict) -> str:
     if name == "list_topics":
         return await _list_topics()
     return f"Unknown tool: {name}"
+
+
+# ---------------------------------------------------------------------------
+# Direct image upload endpoint (bypasses MCP parameter size limits)
+# ---------------------------------------------------------------------------
+
+
+@app.post("/upload-image")
+async def upload_image_endpoint(
+    entry_id: str = Form(...),
+    image: UploadFile = File(...),
+) -> JSONResponse:
+    image_bytes = await image.read()
+
+    # Upload the image file to GitHub
+    _, img_sha = await _get_file(f"images/{entry_id}.jpg")
+    try:
+        await _put_file(
+            f"images/{entry_id}.jpg",
+            image_bytes,
+            sha=img_sha,
+            message=f"Upload image for {entry_id}",
+        )
+    except Exception as exc:
+        return JSONResponse({"error": f"Image upload failed: {exc}"}, status_code=500)
+
+    # Update the entry's has_image flag
+    async with _write_lock:
+        for attempt in range(4):
+            content, sha = await _get_file("data/mistakes.json")
+            if not content:
+                return JSONResponse({"error": "mistakes.json not found"}, status_code=404)
+            mistakes = json.loads(content)
+            entry = next((m for m in mistakes if m["id"] == entry_id), None)
+            if not entry:
+                return JSONResponse({"error": f"Entry {entry_id} not found"}, status_code=404)
+            entry["has_image"] = True
+            entry["image_path"] = f"images/{entry_id}.jpg"
+            try:
+                await _put_file(
+                    "data/mistakes.json",
+                    json.dumps(mistakes, ensure_ascii=False, indent=2),
+                    sha=sha,
+                    message=f"Add image to {entry_id}",
+                )
+                return JSONResponse({"status": "ok", "entry_id": entry_id})
+            except httpx.HTTPStatusError as e:
+                if e.response.status_code == 409 and attempt < 3:
+                    await asyncio.sleep(1.0 * (attempt + 1))
+                    continue
+                return JSONResponse({"error": str(e)}, status_code=500)
+
+    return JSONResponse({"error": "Failed after retries"}, status_code=500)
 
 
 # ---------------------------------------------------------------------------
