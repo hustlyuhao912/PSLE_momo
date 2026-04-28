@@ -11,5 +11,18 @@
     "has_image": false,
     "image_path": "",
     "date_added": "2026-04-28"
+  },
+  {
+    "id": "0845eaa6",
+    "subject": "Science",
+    "topic": "Interaction within the Environment",
+    "question_type": "MCQ",
+    "question_text": "Study the diagram of a pond below. Which of the following statements is/are true?\nA. The floating plants make up one population.\nB. There are two populations of animals in the pond.\nC. There is one community of plants and one community of animals in the habitat.\n(1) B only (2) C only (3) A and B only (4) A, B and C",
+    "background_context": "The diagram shows a pond with multiple types of floating plants on the surface, one type of submerged plant, one type of fish, and one frog.",
+    "correct_answer": "(1) B only",
+    "working": "A is false — there are multiple types of floating plants, so they do not make up one population. B is true — fish and frogs are two populations of animals. C is false — there is only one community in a habitat (all populations living together), not separate communities for plants and animals.",
+    "has_image": false,
+    "image_path": "",
+    "date_added": "2026-04-28"
   }
 ]
