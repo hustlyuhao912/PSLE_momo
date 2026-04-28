@@ -40,8 +40,11 @@ def _headers() -> dict:
 
 async def _get_file(path: str) -> tuple[str | None, str | None]:
     url = f"{API}/repos/{GITHUB_REPO}/contents/{path}"
+    # Cache-Control: no-cache forces GitHub's API to return the live blob SHA,
+    # not a stale cached response from a previous write.
+    headers = {**_headers(), "Cache-Control": "no-cache", "Pragma": "no-cache"}
     async with httpx.AsyncClient(timeout=30) as client:
-        r = await client.get(url, headers=_headers())
+        r = await client.get(url, headers=headers)
         if r.status_code == 404:
             return None, None
         r.raise_for_status()
@@ -226,15 +229,23 @@ async def _save_mistake(args: dict) -> str:
             entry["image_path"] = ""
 
     async with _write_lock:
-        content, sha = await _get_file("data/mistakes.json")
-        mistakes: list = json.loads(content) if content else []
-        mistakes.append(entry)
-        await _put_file(
-            "data/mistakes.json",
-            json.dumps(mistakes, ensure_ascii=False, indent=2),
-            sha=sha,
-            message=f"Add {args['subject']} — {args['topic']} ({entry_id})",
-        )
+        for attempt in range(4):
+            content, sha = await _get_file("data/mistakes.json")
+            mistakes: list = json.loads(content) if content else []
+            mistakes.append(entry)
+            try:
+                await _put_file(
+                    "data/mistakes.json",
+                    json.dumps(mistakes, ensure_ascii=False, indent=2),
+                    sha=sha,
+                    message=f"Add {args['subject']} — {args['topic']} ({entry_id})",
+                )
+                break
+            except httpx.HTTPStatusError as e:
+                if e.response.status_code == 409 and attempt < 3:
+                    await asyncio.sleep(1.0 * (attempt + 1))
+                    continue
+                raise
     return (
         f"Saved ✓  ID: {entry_id} | "
         f"{args['subject']} › {args['topic']} › {args['question_type']}"
@@ -247,41 +258,57 @@ async def _update_mistake(args: dict) -> str:
         "background_context", "correct_answer", "working",
     ]
     async with _write_lock:
-        content, sha = await _get_file("data/mistakes.json")
-        if not content:
-            return "No mistakes stored yet."
-        mistakes = json.loads(content)
-        entry = next((m for m in mistakes if m["id"] == args["entry_id"]), None)
-        if not entry:
-            return f"Entry {args['entry_id']} not found."
-        for field in updatable:
-            if args.get(field):
-                entry[field] = args[field]
-        await _put_file(
-            "data/mistakes.json",
-            json.dumps(mistakes, ensure_ascii=False, indent=2),
-            sha=sha,
-            message=f"Update {args['entry_id']}",
-        )
+        for attempt in range(4):
+            content, sha = await _get_file("data/mistakes.json")
+            if not content:
+                return "No mistakes stored yet."
+            mistakes = json.loads(content)
+            entry = next((m for m in mistakes if m["id"] == args["entry_id"]), None)
+            if not entry:
+                return f"Entry {args['entry_id']} not found."
+            for field in updatable:
+                if args.get(field):
+                    entry[field] = args[field]
+            try:
+                await _put_file(
+                    "data/mistakes.json",
+                    json.dumps(mistakes, ensure_ascii=False, indent=2),
+                    sha=sha,
+                    message=f"Update {args['entry_id']}",
+                )
+                break
+            except httpx.HTTPStatusError as e:
+                if e.response.status_code == 409 and attempt < 3:
+                    await asyncio.sleep(1.0 * (attempt + 1))
+                    continue
+                raise
     return f"Updated ✓  {args['entry_id']}"
 
 
 async def _delete_mistake(args: dict) -> str:
     async with _write_lock:
-        content, sha = await _get_file("data/mistakes.json")
-        if not content:
-            return "No mistakes stored yet."
-        mistakes = json.loads(content)
-        before = len(mistakes)
-        new_mistakes = [m for m in mistakes if m["id"] != args["entry_id"]]
-        if len(new_mistakes) == before:
-            return f"Entry {args['entry_id']} not found."
-        await _put_file(
-            "data/mistakes.json",
-            json.dumps(new_mistakes, ensure_ascii=False, indent=2),
-            sha=sha,
-            message=f"Delete {args['entry_id']}",
-        )
+        for attempt in range(4):
+            content, sha = await _get_file("data/mistakes.json")
+            if not content:
+                return "No mistakes stored yet."
+            mistakes = json.loads(content)
+            before = len(mistakes)
+            new_mistakes = [m for m in mistakes if m["id"] != args["entry_id"]]
+            if len(new_mistakes) == before:
+                return f"Entry {args['entry_id']} not found."
+            try:
+                await _put_file(
+                    "data/mistakes.json",
+                    json.dumps(new_mistakes, ensure_ascii=False, indent=2),
+                    sha=sha,
+                    message=f"Delete {args['entry_id']}",
+                )
+                break
+            except httpx.HTTPStatusError as e:
+                if e.response.status_code == 409 and attempt < 3:
+                    await asyncio.sleep(1.0 * (attempt + 1))
+                    continue
+                raise
     return f"Deleted ✓  {args['entry_id']}"
 
 
