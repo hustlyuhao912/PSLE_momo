@@ -37,18 +37,5 @@
     "has_image": false,
     "image_path": "",
     "date_added": "2026-04-28"
-  },
-  {
-    "id": "d364e98a",
-    "subject": "Science",
-    "topic": "Interaction within the Environment",
-    "question_type": "MCQ",
-    "question_text": "Which of the following options correctly shows the flow of plants, animals, and decomposers in a habitat? (1) plants → animals → decomposers (2) obscured by pen (3) plants → animals, with arrows from both plants and animals to decomposers (4) plants → animals, decomposers shown separately",
-    "background_context": "Question asks about the correct flow/relationship between plants, animals, and decomposers in a habitat.",
-    "correct_answer": "(3) plants → animals, decomposers receive from both plants and animals",
-    "working": "Decomposers break down dead matter from both plants and animals. The correct diagram must show decomposers receiving from BOTH plants and animals. Option (3) shows this correctly.",
-    "has_image": false,
-    "image_path": "",
-    "date_added": "2026-04-28"
   }
 ]
