@@ -204,18 +204,6 @@
       gap: 8px;
     }
     .date-tag { font-size: .72rem; color: #94a3b8; margin-left: auto; }
-    .btn-photo {
-      padding: 4px 12px;
-      border-radius: 6px;
-      border: 1.5px solid #cbd5e1;
-      background: #fff;
-      font-size: .78rem;
-      cursor: pointer;
-      color: #475569;
-      transition: background .1s;
-    }
-    .btn-photo:hover { background: #f1f5f9; }
-
     .btn-upload {
       padding: 4px 12px;
       border-radius: 6px;
@@ -229,9 +217,6 @@
     .btn-upload:hover { background: #dbeafe; }
     .btn-upload:disabled { opacity: .5; cursor: default; }
     .upload-status { font-size: .75rem; color: #64748b; }
-
-    .photo-wrap { display: none; padding: 0 14px 14px; }
-    .photo-wrap img { width: 100%; border-radius: 8px; border: 1px solid #e2e8f0; }
 
     /* ── Empty / error states ────────────────────────────────────── */
     .state-msg {
@@ -279,7 +264,7 @@
     @media print {
       header { position: static !important; background: #1e40af !important;
                -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-      .filters, .fab, .btn-photo, .btn-refresh, .btn-upload, .upload-status { display: none !important; }
+      .filters, .fab, .btn-refresh, .btn-upload, .upload-status { display: none !important; }
       .card { break-inside: avoid; box-shadow: none;
                border: 1px solid #e2e8f0; margin-bottom: 12px; }
       .photo-wrap { display: block !important; }
@@ -428,18 +413,21 @@ function cardHTML(m) {
       <div class="working-text">${esc(m.working)}</div>
     </div>` : '';
 
-  const photoBtn = m.has_image
-    ? `<button class="btn-photo" onclick="togglePhoto('${m.id}')">Show photo</button>`
-    : `<label class="btn-upload" title="Crop on your phone then upload">
+  const photoSection = m.has_image
+    ? `<div>
+         <div class="section-lbl">Photo</div>
+         <img src="${RAW_BASE}${esc(m.image_path)}" alt="Question photo" loading="lazy"
+              style="width:100%;border-radius:8px;border:1px solid #e2e8f0;" />
+       </div>`
+    : '';
+
+  const uploadBtn = !m.has_image
+    ? `<label class="btn-upload" title="Crop on your phone then upload">
          📷 Add photo
          <input type="file" accept="image/*" style="display:none"
                 onchange="uploadPhoto('${m.id}', this)" />
        </label>
-       <span class="upload-status" id="us-${m.id}"></span>`;
-  const photoDiv = m.has_image
-    ? `<div class="photo-wrap" id="photo-${m.id}">
-         <img src="${RAW_BASE}${esc(m.image_path)}" alt="Question photo" loading="lazy" />
-       </div>`
+       <span class="upload-status" id="us-${m.id}"></span>`
     : '';
 
   return `
@@ -451,6 +439,7 @@ function cardHTML(m) {
   </div>
   <div class="card-body">
     ${ctx}
+    ${photoSection}
     <div>
       <div class="section-lbl">Question</div>
       <div class="question-text">${esc(m.question_text)}</div>
@@ -462,10 +451,9 @@ function cardHTML(m) {
     ${working}
   </div>
   <div class="card-foot">
-    ${photoBtn}
+    ${uploadBtn}
     <span class="date-tag">${esc(m.date_added)}</span>
   </div>
-  ${photoDiv}
 </div>`;
 }
 
@@ -502,15 +490,6 @@ async function uploadPhoto(entryId, input) {
     label.style.pointerEvents = '';
     label.style.opacity = '';
   }
-}
-
-// ── Toggle photo ──────────────────────────────────────────────────────────────
-function togglePhoto(id) {
-  const wrap = document.getElementById('photo-' + id);
-  const btn  = wrap.previousElementSibling.querySelector('.btn-photo');
-  const show = wrap.style.display !== 'block';
-  wrap.style.display = show ? 'block' : 'none';
-  if (btn) btn.textContent = show ? 'Hide photo' : 'Show photo';
 }
 
 // ── Escape HTML ───────────────────────────────────────────────────────────────
