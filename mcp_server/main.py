@@ -368,6 +368,17 @@ async def _handle_tool(name: str, args: dict) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Health check
+# ---------------------------------------------------------------------------
+
+
+@app.get("/")
+@app.get("/health")
+async def health_check() -> JSONResponse:
+    return JSONResponse({"status": "ok"})
+
+
+# ---------------------------------------------------------------------------
 # Direct image upload endpoint (bypasses MCP parameter size limits)
 # ---------------------------------------------------------------------------
 

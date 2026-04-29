@@ -305,8 +305,11 @@
 
 <script>
 const SUBJECT_ORDER = ['Mathematics', 'Science', 'English', 'Chinese'];
-const UPLOAD_URL = 'https://psle-momo.onrender.com/upload-image';
-const RAW_BASE   = 'https://raw.githubusercontent.com/hustlyuhao912/PSLE_momo/main/';
+const UPLOAD_URL   = 'https://psle-momo.onrender.com/upload-image';
+const HEALTH_URL   = 'https://psle-momo.onrender.com/health';
+const RAW_BASE     = 'https://raw.githubusercontent.com/hustlyuhao912/PSLE_momo/main/';
+
+let serverReady = false;
 
 let all = [];
 let activeSubject = 'All';
@@ -422,12 +425,13 @@ function cardHTML(m) {
     : '';
 
   const uploadBtn = !m.has_image
-    ? `<label class="btn-upload" title="Crop on your phone then upload">
+    ? `<label class="btn-upload" id="lbl-${m.id}" title="Crop on your phone then upload"
+             style="${serverReady ? '' : 'opacity:0.5;pointer-events:none'}">
          📷 Add photo
          <input type="file" accept="image/*" style="display:none"
                 onchange="uploadPhoto('${m.id}', this)" />
        </label>
-       <span class="upload-status" id="us-${m.id}"></span>`
+       <span class="upload-status" id="us-${m.id}">${serverReady ? '' : 'Server warming up…'}</span>`
     : '';
 
   return `
@@ -468,19 +472,12 @@ async function uploadPhoto(entryId, input) {
   status.textContent = 'Uploading…';
   status.style.color = '#64748b';
 
-  // Show a "waking up" message if the server is cold-starting
-  const wakeTimer = setTimeout(() => {
-    if (status.textContent === 'Uploading…')
-      status.textContent = 'Waking up server… (may take ~30s on first upload)';
-  }, 4000);
-
   const fd = new FormData();
   fd.append('entry_id', entryId);
   fd.append('image', file);
 
   try {
     const r = await fetch(UPLOAD_URL, { method: 'POST', body: fd });
-    clearTimeout(wakeTimer);
     let d;
     try { d = await r.json(); } catch { d = {}; }
     if (r.ok && d.status === 'ok') {
@@ -493,7 +490,6 @@ async function uploadPhoto(entryId, input) {
       label.style.opacity = '';
     }
   } catch (e) {
-    clearTimeout(wakeTimer);
     status.textContent = `Upload error: ${e.message}`;
     status.style.color = '#dc2626';
     label.style.pointerEvents = '';
@@ -510,8 +506,36 @@ function esc(s) {
 
 loadData();
 
-// Silently wake the Render server so it's ready when the user taps Add photo
-fetch(UPLOAD_URL.replace('/upload-image', '/'), { method: 'HEAD' }).catch(() => {});
+// Poll /health until the Render server is awake, then unlock upload buttons.
+// This prevents "Load failed" from a CORS preflight hitting a sleeping (503) server.
+(async function warmUp() {
+  for (let i = 0; i < 12; i++) {
+    try {
+      const r = await fetch(HEALTH_URL, { signal: AbortSignal.timeout(8000) });
+      if (r.ok) {
+        serverReady = true;
+        document.querySelectorAll('.btn-upload').forEach(lbl => {
+          lbl.style.opacity = '';
+          lbl.style.pointerEvents = '';
+        });
+        document.querySelectorAll('.upload-status').forEach(s => {
+          if (s.textContent === 'Server warming up…') s.textContent = '';
+        });
+        return;
+      }
+    } catch (_) { /* server still waking */ }
+    await new Promise(r => setTimeout(r, 5000));
+  }
+  // After ~60s give up; let them try anyway
+  serverReady = true;
+  document.querySelectorAll('.btn-upload').forEach(lbl => {
+    lbl.style.opacity = '';
+    lbl.style.pointerEvents = '';
+  });
+  document.querySelectorAll('.upload-status').forEach(s => {
+    if (s.textContent === 'Server warming up…') s.textContent = 'Server may be slow';
+  });
+})();
 </script>
 </body>
 </html>
