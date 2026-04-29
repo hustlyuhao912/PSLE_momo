@@ -463,10 +463,16 @@ async function uploadPhoto(entryId, input) {
   if (!file) return;
   const status = document.getElementById('us-' + entryId);
   const label  = input.closest('label');
-  label.classList.add('btn-upload');
   label.style.pointerEvents = 'none';
   label.style.opacity = '0.5';
   status.textContent = 'Uploading…';
+  status.style.color = '#64748b';
+
+  // Show a "waking up" message if the server is cold-starting
+  const wakeTimer = setTimeout(() => {
+    if (status.textContent === 'Uploading…')
+      status.textContent = 'Waking up server… (may take ~30s on first upload)';
+  }, 4000);
 
   const fd = new FormData();
   fd.append('entry_id', entryId);
@@ -474,18 +480,21 @@ async function uploadPhoto(entryId, input) {
 
   try {
     const r = await fetch(UPLOAD_URL, { method: 'POST', body: fd });
-    const d = await r.json();
-    if (d.status === 'ok') {
-      status.textContent = 'Saved! Reload in ~1 min to see photo.';
+    clearTimeout(wakeTimer);
+    let d;
+    try { d = await r.json(); } catch { d = {}; }
+    if (r.ok && d.status === 'ok') {
+      status.textContent = 'Saved! Refresh the page in ~1 min to see the photo.';
       status.style.color = '#15803d';
     } else {
-      status.textContent = 'Failed: ' + (d.error || 'unknown');
+      status.textContent = `Failed (HTTP ${r.status}): ${d.error || 'unknown error'}`;
       status.style.color = '#dc2626';
       label.style.pointerEvents = '';
       label.style.opacity = '';
     }
   } catch (e) {
-    status.textContent = 'Upload failed — check connection.';
+    clearTimeout(wakeTimer);
+    status.textContent = `Upload error: ${e.message}`;
     status.style.color = '#dc2626';
     label.style.pointerEvents = '';
     label.style.opacity = '';
@@ -500,6 +509,9 @@ function esc(s) {
 }
 
 loadData();
+
+// Silently wake the Render server so it's ready when the user taps Add photo
+fetch(UPLOAD_URL.replace('/upload-image', '/'), { method: 'HEAD' }).catch(() => {});
 </script>
 </body>
 </html>
